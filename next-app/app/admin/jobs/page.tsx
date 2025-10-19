@@ -162,6 +162,11 @@ export default function AdminJobsPage() {
           <button onClick={logout} className="text-sm text-red-600 hover:underline">Logout</button>
         </div>
 
+        <div className="mb-6 flex items-center gap-3">
+          <a href="/admin/jobs" className="text-sm px-3 py-1.5 rounded bg-primary text-white">Jobs</a>
+          <a href="/admin/resumes" className="text-sm px-3 py-1.5 rounded border">Resumes</a>
+        </div>
+
         {message && (
           <div className="mb-4 p-4 rounded bg-green-50 text-green-700 border border-green-200">{message}</div>
         )}

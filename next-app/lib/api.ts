@@ -22,8 +22,9 @@ function getToken(): string | null {
 export async function api(path: string, opts: ApiOptions = {}) {
   const url = path.startsWith('http') ? path : `${API_BASE_URL}${path.startsWith('/') ? '' : '/'}${path}`;
   const token = getToken();
+  const isForm = typeof FormData !== 'undefined' && opts.body instanceof FormData;
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
+    ...(isForm ? {} : { 'Content-Type': 'application/json' }),
     ...(opts.headers || {}),
   };
   if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -31,7 +32,13 @@ export async function api(path: string, opts: ApiOptions = {}) {
   const res = await fetch(url, {
     method: opts.method || 'GET',
     headers,
-    body: opts.body ? (typeof opts.body === 'string' ? opts.body : JSON.stringify(opts.body)) : undefined,
+    body: opts.body
+      ? isForm
+        ? (opts.body as any)
+        : typeof opts.body === 'string'
+        ? opts.body
+        : JSON.stringify(opts.body)
+      : undefined,
   });
 
   const text = await res.text();
@@ -47,4 +54,3 @@ export const apiGet = <T = any>(path: string) => api(path) as Promise<T>;
 export const apiPost = <T = any>(path: string, body?: any) => api(path, { method: 'POST', body }) as Promise<T>;
 export const apiPut = <T = any>(path: string, body?: any) => api(path, { method: 'PUT', body }) as Promise<T>;
 export const apiDelete = <T = any>(path: string) => api(path, { method: 'DELETE' }) as Promise<T>;
-
