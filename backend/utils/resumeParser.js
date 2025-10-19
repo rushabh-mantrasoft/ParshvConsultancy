@@ -4,6 +4,7 @@ const path = require('path');
 // Lazy require heavy deps to avoid cost when not used
 let pdfParse = null;
 let mammoth = null;
+let OpenAIClient = null;
 
 function safeLoadPdfParse() {
   try {
@@ -18,6 +19,15 @@ function safeLoadMammoth() {
   try {
     if (!mammoth) mammoth = require('mammoth');
     return mammoth;
+  } catch (e) {
+    return null;
+  }
+}
+
+function safeLoadOpenAI() {
+  try {
+    if (!OpenAIClient) OpenAIClient = require('openai');
+    return OpenAIClient;
   } catch (e) {
     return null;
   }
@@ -125,13 +135,74 @@ async function parseResume(filePath, mimeType) {
   if (!text) {
     return { rawText: '', name: null, email: null, phone: null, skills: '', education: '' };
   }
-  const email = extractEmail(text);
-  const phone = extractPhone(text);
-  const name = extractName(text);
-  const skills = extractSkills(text);
-  const education = extractEducation(text);
-  return { rawText: text, name, email, phone, skills, education };
+
+  // Heuristic parse first (for fallback/merge)
+  const heur = {
+    email: extractEmail(text),
+    phone: extractPhone(text),
+    name: extractName(text),
+    skills: extractSkills(text),
+    education: extractEducation(text),
+  };
+
+  // If OpenAI API key available, ask AI to parse
+  const apiKey = process.env.OPENAI_API_KEY;
+  const OpenAI = safeLoadOpenAI();
+  if (apiKey && OpenAI) {
+    try {
+      const client = new OpenAI({ apiKey });
+      const model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+      // Limit text length to keep token usage reasonable
+      const limited = text.slice(0, 20000);
+      const system = 'You are a resume parsing assistant. Extract key fields precisely.';
+      const user = `Extract the following fields from the resume text and return ONLY JSON with keys: name (string), email (string), phone (string), skills (array of strings), education (string).\nIf a field is unknown, use empty string or empty array.\nResume Text:\n---\n${limited}\n---`;
+
+      let completion;
+      try {
+        completion = await client.chat.completions.create({
+          model,
+          messages: [
+            { role: 'system', content: system },
+            { role: 'user', content: user },
+          ],
+          temperature: 0,
+          response_format: { type: 'json_object' },
+        });
+      } catch (err) {
+        // Some models may not support response_format; retry without it
+        completion = await client.chat.completions.create({
+          model,
+          messages: [
+            { role: 'system', content: system },
+            { role: 'user', content: `${user}\nReturn only valid minified JSON.` },
+          ],
+          temperature: 0,
+        });
+      }
+
+      const content = completion.choices?.[0]?.message?.content || '';
+      let parsed;
+      try {
+        parsed = JSON.parse(content);
+      } catch {
+        parsed = {};
+      }
+
+      const aiName = (parsed.name || '').toString().trim() || heur.name || null;
+      const aiEmail = (parsed.email || '').toString().trim() || heur.email || null;
+      const aiPhone = (parsed.phone || '').toString().trim() || heur.phone || null;
+      const aiSkillsArr = Array.isArray(parsed.skills) ? parsed.skills : [];
+      const aiSkills = (aiSkillsArr.join(', ') || heur.skills || '').trim();
+      const aiEducation = (parsed.education || '').toString().trim() || heur.education || '';
+
+      return { rawText: text, name: aiName, email: aiEmail, phone: aiPhone, skills: aiSkills, education: aiEducation };
+    } catch (e) {
+      console.warn('AI parsing failed, falling back to heuristics:', e.message || e);
+      // fall through to heuristics
+    }
+  }
+
+  return { rawText: text, name: heur.name, email: heur.email, phone: heur.phone, skills: heur.skills, education: heur.education };
 }
 
 module.exports = { parseResume };
-
