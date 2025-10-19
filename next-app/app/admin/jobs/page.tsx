@@ -155,16 +155,16 @@ export default function AdminJobsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-10">
-      <div className="container mx-auto px-4 max-w-5xl">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 py-10">
+      <div className="container mx-auto px-4 max-w-6xl">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-bold">Admin: Jobs</h1>
+          <div><h1 className="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-gray-100">Admin: Jobs</h1><p className="text-sm text-gray-500 dark:text-gray-400">Create and manage job postings.</p></div>
           <button onClick={logout} className="text-sm text-red-600 hover:underline">Logout</button>
         </div>
 
         <div className="mb-6 flex items-center gap-3">
-          <a href="/admin/jobs" className="text-sm px-3 py-1.5 rounded bg-primary text-white">Jobs</a>
-          <a href="/admin/resumes" className="text-sm px-3 py-1.5 rounded border">Resumes</a>
+          <a href="/admin/jobs" className="inline-flex items-center gap-2 rounded-md bg-primary text-white px-3 py-1.5 text-sm shadow hover:opacity-95">Jobs</a>
+          <a href="/admin/resumes" className="inline-flex items-center gap-2 rounded-md border border-black/10 dark:border-white/10 px-3 py-1.5 text-sm hover:bg-black/5 dark:hover:bg-white/10">Resumes</a>
         </div>
 
         {message && (
@@ -175,31 +175,31 @@ export default function AdminJobsPage() {
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <form onSubmit={onSubmit} className="space-y-4 bg-white p-6 rounded shadow">
-            <h2 className="text-xl font-semibold">Add Job</h2>
+          <form onSubmit={onSubmit} className="space-y-4 bg-white dark:bg-gray-900 border dark:border-white/10 p-6 rounded-xl shadow-sm">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Add Job</h2>
             <div>
-              <label htmlFor="title" className="block text-sm font-medium text-gray-700">Title</label>
+              <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Title</label>
               <input
                 id="title"
                 name="title"
                 type="text"
                 value={form.title}
                 onChange={onChange}
-                className="mt-1 block w-full rounded border-gray-300 focus:border-primary focus:ring-primary"
+                className="mt-1 block w-full rounded-md border border-gray-300 dark:border-white/10 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition"
                 placeholder="e.g., Senior Software Engineer"
                 required
               />
             </div>
 
             <div>
-              <label htmlFor="description" className="block text-sm font-medium text-gray-700">Description</label>
+              <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Description</label>
               <textarea
                 id="description"
                 name="description"
                 rows={6}
                 value={form.description}
                 onChange={onChange}
-                className="mt-1 block w-full rounded border-gray-300 focus:border-primary focus:ring-primary"
+                className="mt-1 block w-full rounded-md border border-gray-300 dark:border-white/10 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition"
                 placeholder="Role overview, responsibilities, requirements..."
                 required
               />
@@ -207,27 +207,27 @@ export default function AdminJobsPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label htmlFor="location" className="block text-sm font-medium text-gray-700">Location</label>
+                <label htmlFor="location" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Location</label>
                 <input
                   id="location"
                   name="location"
                   type="text"
                   value={form.location}
                   onChange={onChange}
-                  className="mt-1 block w-full rounded border-gray-300 focus:border-primary focus:ring-primary"
+                  className="mt-1 block w-full rounded-md border border-gray-300 dark:border-white/10 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition"
                   placeholder="e.g., Mumbai, IN or Remote"
                   required
                 />
               </div>
               <div>
-                <label htmlFor="salary" className="block text-sm font-medium text-gray-700">Salary (optional)</label>
+                <label htmlFor="salary" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Salary (optional)</label>
                 <input
                   id="salary"
                   name="salary"
                   type="text"
                   value={form.salary}
                   onChange={onChange}
-                  className="mt-1 block w-full rounded border-gray-300 focus:border-primary focus:ring-primary"
+                  className="mt-1 block w-full rounded-md border border-gray-300 dark:border-white/10 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition"
                   placeholder="e.g., ₹12–15 LPA"
                 />
               </div>
@@ -237,65 +237,68 @@ export default function AdminJobsPage() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="inline-flex items-center px-4 py-2 rounded bg-primary text-white hover:opacity-90 disabled:opacity-60"
+                className="inline-flex items-center px-4 py-2 rounded-md bg-primary text-white hover:opacity-90 disabled:opacity-60"
               >
                 {submitting ? "Creating..." : "Create Job"}
               </button>
             </div>
           </form>
 
-          <div className="bg-white p-6 rounded shadow">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold">All Jobs</h2>
-              {loadingJobs && <span className="text-sm text-gray-500">Loading...</span>}
+          <div className="bg-white dark:bg-gray-900 border dark:border-white/10 p-6 rounded-xl shadow-sm">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">All Jobs</h2>
+              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                <span className="rounded-full border dark:border-white/10 px-2 py-0.5">{jobs.length}</span>
+                {loadingJobs && <span className="ml-2">Loading…</span>}
+              </div>
             </div>
-            <div className="divide-y">
+            <div className="grid grid-cols-1 gap-4">
               {!loadingJobs && jobs.length === 0 && (
                 <p className="text-gray-500">No jobs available.</p>
               )}
               {jobs.map((job) => (
-                <div key={job.id} className="py-4">
+                <div key={job.id} className="rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-950 p-4 shadow-sm hover:shadow transition">
                   {editId === job.id ? (
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       <input
-                        className="w-full rounded border-gray-300"
+                        className="w-full rounded-md border border-gray-300 dark:border-white/10 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition"
                         value={editForm.title}
                         onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
                       />
                       <textarea
-                        className="w-full rounded border-gray-300"
+                        className="w-full rounded-md border border-gray-300 dark:border-white/10 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition"
                         rows={4}
                         value={editForm.description}
                         onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
                       />
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                         <input
-                          className="w-full rounded border-gray-300"
+                          className="w-full rounded-md border border-gray-300 dark:border-white/10 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition"
                           value={editForm.location}
                           onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
                         />
                         <input
-                          className="w-full rounded border-gray-300"
+                          className="w-full rounded-md border border-gray-300 dark:border-white/10 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition"
                           placeholder="Salary (optional)"
                           value={editForm.salary}
                           onChange={(e) => setEditForm({ ...editForm, salary: e.target.value })}
                         />
                       </div>
-                      <div className="space-x-2">
-                        <button className="px-3 py-1 rounded bg-primary text-white" onClick={() => saveEdit(job.id)}>Save</button>
-                        <button className="px-3 py-1 rounded border" onClick={cancelEdit}>Cancel</button>
+                      <div className="flex gap-2">
+                        <button className="px-3 py-1.5 rounded-md bg-primary text-white text-sm" onClick={() => saveEdit(job.id)}>Save</button>
+                        <button className="px-3 py-1.5 rounded-md border dark:border-white/10 text-sm" onClick={cancelEdit}>Cancel</button>
                       </div>
                     </div>
                   ) : (
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <h3 className="font-semibold">{job.title}</h3>
-                        <p className="text-sm text-gray-600 line-clamp-2">{job.description}</p>
+                    <div className="flex items-start justify-between gap-6">
+                      <div className="min-w-0">
+                        <h3 className="font-semibold text-gray-900 dark:text-gray-100 truncate max-w-[60vw] md:max-w-none">{job.title}</h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mt-1">{job.description}</p>
                         <p className="text-sm text-gray-500 mt-1">{job.location} {job.salary ? `• ${job.salary}` : ''}</p>
                       </div>
-                      <div className="shrink-0 space-x-2">
-                        <button className="px-3 py-1 rounded border" onClick={() => startEdit(job)}>Edit</button>
-                        <button className="px-3 py-1 rounded border border-red-300 text-red-600" onClick={() => deleteJob(job.id)}>Delete</button>
+                      <div className="shrink-0 flex items-center gap-2">
+                        <button className="px-3 py-1.5 rounded-md border dark:border-white/10 text-sm" onClick={() => startEdit(job)}>Edit</button>
+                        <button className="px-3 py-1.5 rounded-md border border-red-300 text-red-600 text-sm" onClick={() => deleteJob(job.id)}>Delete</button>
                       </div>
                     </div>
                   )}
