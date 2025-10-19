@@ -4,6 +4,7 @@ const path = require('path');
 const jobsRouter = require('./routes/jobs');
 const resumesRouter = require('./routes/resumes');
 const contactRouter = require('./routes/contact');
+const authRouter = require('./routes/auth');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -19,6 +20,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api/jobs', jobsRouter);
 app.use('/api/resumes', resumesRouter);
 app.use('/api/contact', contactRouter);
+app.use('/api/auth', authRouter);
 
 // Default route
 app.get('/', (req, res) => {
