@@ -13,6 +13,7 @@ export default function Header() {
           <Link href="/blog" className="text-gray-700 hover:text-primary">Blog</Link>
           <Link href="/jobs" className="text-gray-700 hover:text-primary">Jobs</Link>
           <Link href="/contact" className="text-gray-700 hover:text-primary">Contact</Link>
+          <Link href="/admin/jobs" className="text-gray-700 hover:text-primary">Admin</Link>
         </nav>
       </div>
     </header>
