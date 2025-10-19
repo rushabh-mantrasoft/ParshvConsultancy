@@ -54,3 +54,22 @@ export const apiGet = <T = any>(path: string) => api(path) as Promise<T>;
 export const apiPost = <T = any>(path: string, body?: any) => api(path, { method: 'POST', body }) as Promise<T>;
 export const apiPut = <T = any>(path: string, body?: any) => api(path, { method: 'PUT', body }) as Promise<T>;
 export const apiDelete = <T = any>(path: string) => api(path, { method: 'DELETE' }) as Promise<T>;
+
+export async function apiGetWithHeaders<T = any>(path: string): Promise<{ data: T; headers: Headers }>{
+  const url = path.startsWith('http') ? path : `${API_BASE_URL}${path.startsWith('/') ? '' : '/'}${path}`;
+  const token = getToken();
+  const headers: Record<string, string> = {};
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const res = await fetch(url, {
+    method: 'GET',
+    headers,
+  });
+  const text = await res.text();
+  const data = text ? JSON.parse(text) : null;
+  if (!res.ok) {
+    const message = (data && (data.message || data.error)) || res.statusText || 'Request failed';
+    throw new Error(message);
+  }
+  return { data, headers: res.headers } as { data: T; headers: Headers };
+}

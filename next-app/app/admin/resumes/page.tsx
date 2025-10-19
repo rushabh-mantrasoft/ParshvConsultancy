@@ -1,9 +1,9 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { apiGet, apiPost, apiPut, apiDelete } from '@/lib/api';
+import { apiGet, apiPost, apiPut, apiDelete, apiGetWithHeaders } from '@/lib/api';
 
 type Resume = {
   id: number;
@@ -35,6 +35,11 @@ export default function AdminResumesPage() {
   const PAGE_SIZE = 20;
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(true);
+  const [total, setTotal] = useState<number | null>(null);
+  const [uploadOpen, setUploadOpen] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true;
+    try { const v = localStorage.getItem('admin_upload_open'); return v ? v === '1' : true; } catch { return true; }
+  });
   const [expSkills, setExpSkills] = useState<Record<number, boolean>>({});
   const [expEdu, setExpEdu] = useState<Record<number, boolean>>({});
 
@@ -81,10 +86,12 @@ export default function AdminResumesPage() {
       const base = q || skillQuery ? '/api/resumes/search' : '/api/resumes';
       if (q) qs.set('q', q);
       if (skillQuery) qs.set('skills', skillQuery);
-      const data = await apiGet<Resume[]>(`${base}?${qs.toString()}`);
+      const { data, headers } = await apiGetWithHeaders<Resume[]>(`${base}?${qs.toString()}`);
       setResumes((prev) => (reset ? data : [...prev, ...data]));
       setHasMore(data.length === PAGE_SIZE);
       setOffset((prev) => (reset ? data.length : prev + data.length));
+      const t = headers.get('X-Total-Count');
+      if (t) setTotal(parseInt(t, 10));
     } catch (e: any) {
       setError(e.message ?? 'Failed to load resumes');
     } finally {
@@ -196,6 +203,21 @@ export default function AdminResumesPage() {
     localStorage.removeItem('admin_token');
     router.push('/admin/login');
   };
+  
+  // infinite scroll observer
+  useEffect(() => {
+    const el = document.getElementById('sentinel');
+    if (!el) return;
+    const obs = new IntersectionObserver((entries) => {
+      const entry = entries[0];
+      if (entry.isIntersecting && hasMore && !loading) {
+        fetchResumes(false);
+      }
+    }, { rootMargin: '200px' });
+    obs.observe(el);
+    return () => { obs.disconnect(); };
+  }, [hasMore, loading, q, skillQuery, offset]);
+
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 py-10">
@@ -213,9 +235,20 @@ export default function AdminResumesPage() {
         {message && <div className="mb-4 p-3 rounded bg-green-50 text-green-700 border border-green-200">{message}</div>}
         {error && <div className="mb-4 p-3 rounded bg-red-50 text-red-700 border border-red-200">{error}</div>}
 
-        {/* Upload form (full width) */}
-        <form onSubmit={onUpload} className="space-y-3 bg-white dark:bg-gray-900 border dark:border-white/10 p-6 rounded mb-8">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Upload Resume</h2>
+        {/* Upload form (collapsible, full width) */}
+        <div className="bg-white dark:bg-gray-900 border dark:border-white/10 rounded mb-4">
+          <div className="flex items-center justify-between px-6 py-4">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Upload Resume</h2>
+            <button
+              type="button"
+              onClick={() => { setUploadOpen((v) => { const nv = !v; try { localStorage.setItem('admin_upload_open', nv ? '1' : '0'); } catch {}; return nv; }); }}
+              className="text-sm underline"
+            >
+              {uploadOpen ? 'Hide' : 'Show'}
+            </button>
+          </div>
+          {uploadOpen && (
+            <form onSubmit={onUpload} className="space-y-3 px-6 pb-6">
           <p className="text-sm text-gray-500 dark:text-gray-400">Leave fields blank to auto-fill using the resume parser.</p>
           <input placeholder="Candidate name (optional)" className="w-full rounded border-gray-300 dark:bg-gray-950 dark:border-white/10" value={form.candidate_name} onChange={(e) => setForm({ ...form, candidate_name: e.target.value })} />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -231,7 +264,9 @@ export default function AdminResumesPage() {
             </button>
             <button disabled={uploading} className="rounded bg-primary text-white px-4 py-2">{uploading ? 'Saving...' : 'Save Resume'}</button>
           </div>
-        </form>
+            </form>
+          )}
+        </div>
 
         {/* Search */}
         <form onSubmit={onSearch} className="mb-6 grid grid-cols-1 md:grid-cols-6 gap-3 bg-white dark:bg-gray-900 border dark:border-white/10 p-4 rounded">
@@ -244,7 +279,12 @@ export default function AdminResumesPage() {
         <div className="bg-white dark:bg-gray-900 border dark:border-white/10 p-6 rounded">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">All Resumes</h2>
-            {loading && <span className="text-sm text-gray-500">Loading...</span>}
+            <div className="text-sm text-gray-500">
+              {typeof total === 'number' && (
+                <span>Showing {resumes.length} of {total}</span>
+              )}
+              {loading && <span className="ml-3">Loading...</span>}
+            </div>
           </div>
           <div className="divide-y dark:divide-white/10">
             {!loading && resumes.length === 0 && (
@@ -316,13 +356,7 @@ export default function AdminResumesPage() {
               </div>
             ))}
           </div>
-          {hasMore && (
-            <div className="pt-4">
-              <button disabled={loading} onClick={() => fetchResumes(false)} className="rounded border dark:border-white/10 px-4 py-2">
-                {loading ? 'Loading...' : 'Load more'}
-              </button>
-            </div>
-          )}
+          <div id="sentinel" className="h-8" />
         </div>
       </div>
     </div>
