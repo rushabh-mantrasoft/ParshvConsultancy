@@ -1,13 +1,23 @@
 import Hero from '@/components/Hero';
-import AboutSection from '@/components/AboutSection';
+import Partners from '@/components/Partners';
+import Services from '@/components/Services';
+import Stats from '@/components/Stats';
+import Testimonials from '@/components/Testimonials';
+import FAQ from '@/components/FAQ';
+import CTA from '@/components/CTA';
 import JobList from '@/components/JobList';
 
 export default function HomePage() {
   return (
     <div>
       <Hero />
-      <AboutSection />
+      <Partners />
+      <Services />
+      <Stats />
       <JobList />
+      <Testimonials />
+      <FAQ />
+      <CTA />
     </div>
   );
 }
