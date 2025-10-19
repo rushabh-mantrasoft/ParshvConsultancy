@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../config/db');
 const { requireAuth } = require('../middleware/auth');
+const { body, validationResult } = require('express-validator');
 
 // GET /api/jobs - list all jobs
 router.get('/', async (req, res) => {
@@ -30,44 +31,66 @@ router.get('/:id', async (req, res) => {
 });
 
 // POST /api/jobs - create a new job
-router.post('/', requireAuth, async (req, res) => {
-  const { title, description, location, salary } = req.body;
-  if (!title || !description || !location) {
-    return res.status(400).json({ message: 'Title, description and location are required' });
+router.post(
+  '/',
+  requireAuth,
+  [
+    body('title').isString().trim().notEmpty(),
+    body('description').isString().trim().notEmpty(),
+    body('location').isString().trim().notEmpty(),
+    body('salary').optional({ nullable: true }).isString().trim(),
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ message: 'Invalid input', errors: errors.array() });
+    }
+    const { title, description, location, salary } = req.body;
+    try {
+      const [result] = await db.query(
+        'INSERT INTO jobs (title, description, location, salary, created_at) VALUES (?, ?, ?, ?, NOW())',
+        [title, description, location, salary || null]
+      );
+      res.status(201).json({ id: result.insertId, title, description, location, salary });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Database error' });
+    }
   }
-  try {
-    const [result] = await db.query(
-      'INSERT INTO jobs (title, description, location, salary, created_at) VALUES (?, ?, ?, ?, NOW())',
-      [title, description, location, salary || null]
-    );
-    res.status(201).json({ id: result.insertId, title, description, location, salary });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Database error' });
-  }
-});
+);
 
 // PUT /api/jobs/:id - update a job
-router.put('/:id', requireAuth, async (req, res) => {
-  const { id } = req.params;
-  const { title, description, location, salary } = req.body;
-  if (!title || !description || !location) {
-    return res.status(400).json({ message: 'Title, description and location are required' });
-  }
-  try {
-    const [result] = await db.query(
-      'UPDATE jobs SET title = ?, description = ?, location = ?, salary = ? WHERE id = ? LIMIT 1',
-      [title, description, location, salary || null, id]
-    );
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ message: 'Job not found' });
+router.put(
+  '/:id',
+  requireAuth,
+  [
+    body('title').isString().trim().notEmpty(),
+    body('description').isString().trim().notEmpty(),
+    body('location').isString().trim().notEmpty(),
+    body('salary').optional({ nullable: true }).isString().trim(),
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ message: 'Invalid input', errors: errors.array() });
     }
-    res.json({ id: Number(id), title, description, location, salary });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Database error' });
+    const { id } = req.params;
+    const { title, description, location, salary } = req.body;
+    try {
+      const [result] = await db.query(
+        'UPDATE jobs SET title = ?, description = ?, location = ?, salary = ? WHERE id = ? LIMIT 1',
+        [title, description, location, salary || null, id]
+      );
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ message: 'Job not found' });
+      }
+      res.json({ id: Number(id), title, description, location, salary });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Database error' });
+    }
   }
-});
+);
 
 // DELETE /api/jobs/:id - delete a job
 router.delete('/:id', requireAuth, async (req, res) => {

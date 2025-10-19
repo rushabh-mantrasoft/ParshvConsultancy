@@ -1,7 +1,9 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
+import { apiGet } from '@/lib/api';
 
 interface Job {
   id: number;
@@ -11,12 +13,7 @@ interface Job {
   salary: string;
 }
 
-const API_BASE_URL = (() => {
-  const base = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:4000';
-  return base.endsWith('/') ? base.slice(0, -1) : base;
-})();
-
-const jobsEndpoint = `${API_BASE_URL}/api/jobs`;
+const jobsEndpoint = `/api/jobs`;
 
 export default function JobList() {
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -26,11 +23,7 @@ export default function JobList() {
   useEffect(() => {
     async function fetchJobs() {
       try {
-        const res = await fetch(jobsEndpoint);
-        if (!res.ok) {
-          throw new Error('Failed to fetch jobs');
-        }
-        const data: Job[] = await res.json();
+        const data = await apiGet<Job[]>(jobsEndpoint);
         setJobs(data);
       } catch (err: any) {
         setError(err.message ?? 'Unable to load jobs');

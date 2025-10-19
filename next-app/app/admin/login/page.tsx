@@ -2,11 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-
-const API_BASE_URL = (() => {
-  const base = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:4000';
-  return base.endsWith('/') ? base.slice(0, -1) : base;
-})();
+import { apiPost } from '@/lib/api';
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -20,15 +16,8 @@ export default function AdminLoginPage() {
     setError(null);
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data?.token) {
-        throw new Error(data?.message || 'Login failed');
-      }
+      const data = await apiPost<{ token: string }>(`/api/auth/login`, { username, password });
+      if (!data?.token) throw new Error('Login failed');
       localStorage.setItem('admin_token', data.token);
       router.push('/admin/jobs');
     } catch (err: any) {
@@ -80,4 +69,3 @@ export default function AdminLoginPage() {
     </div>
   );
 }
-

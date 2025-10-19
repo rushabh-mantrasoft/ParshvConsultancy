@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { apiDelete, apiGet, apiPost, apiPut } from "@/lib/api";
 
 type JobPayload = {
   title: string;
@@ -12,12 +13,7 @@ type JobPayload = {
 
 type Job = JobPayload & { id: number };
 
-const API_BASE_URL = (() => {
-  const base = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
-  return base.endsWith("/") ? base.slice(0, -1) : base;
-})();
-
-const jobsEndpoint = `${API_BASE_URL}/api/jobs`;
+const jobsEndpoint = `/api/jobs`;
 
 export default function AdminJobsPage() {
   const router = useRouter();
@@ -52,18 +48,12 @@ export default function AdminJobsPage() {
     setToken(t);
   }, [router]);
 
-  const authHeaders = useMemo(() => {
-    return token
-      ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }
-      : { "Content-Type": "application/json" };
-  }, [token]);
+  // Authorization header is handled by the API client via localStorage token
 
   const fetchJobs = async () => {
     setLoadingJobs(true);
     try {
-      const res = await fetch(jobsEndpoint);
-      if (!res.ok) throw new Error("Failed to load jobs");
-      const data: Job[] = await res.json();
+      const data = await apiGet<Job[]>(jobsEndpoint);
       setJobs(data);
     } catch (e: any) {
       setError(e.message ?? "Unable to load jobs");
@@ -99,21 +89,12 @@ export default function AdminJobsPage() {
 
     setSubmitting(true);
     try {
-      const res = await fetch(jobsEndpoint, {
-        method: "POST",
-        headers: authHeaders,
-        body: JSON.stringify({
-          title: form.title.trim(),
-          description: form.description.trim(),
-          location: form.location.trim(),
-          salary: form.salary?.trim() || undefined,
-        }),
+      await apiPost(jobsEndpoint, {
+        title: form.title.trim(),
+        description: form.description.trim(),
+        location: form.location.trim(),
+        salary: form.salary?.trim() || undefined,
       });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data?.message || "Failed to create job");
-      }
 
       setMessage("Job created successfully. It is now visible on the Jobs page.");
       setForm({ title: "", description: "", location: "", salary: "" });
@@ -142,20 +123,12 @@ export default function AdminJobsPage() {
   const saveEdit = async (id: number) => {
     if (!token) return router.push("/admin/login");
     try {
-      const res = await fetch(`${jobsEndpoint}/${id}`, {
-        method: "PUT",
-        headers: authHeaders,
-        body: JSON.stringify({
-          title: editForm.title.trim(),
-          description: editForm.description.trim(),
-          location: editForm.location.trim(),
-          salary: editForm.salary?.trim() || undefined,
-        }),
+      await apiPut(`${jobsEndpoint}/${id}`, {
+        title: editForm.title.trim(),
+        description: editForm.description.trim(),
+        location: editForm.location.trim(),
+        salary: editForm.salary?.trim() || undefined,
       });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data?.message || "Failed to update job");
-      }
       setMessage("Job updated.");
       setEditId(null);
       await fetchJobs();
@@ -168,14 +141,7 @@ export default function AdminJobsPage() {
     if (!token) return router.push("/admin/login");
     if (!confirm("Delete this job?")) return;
     try {
-      const res = await fetch(`${jobsEndpoint}/${id}`, {
-        method: "DELETE",
-        headers: authHeaders,
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data?.message || "Failed to delete job");
-      }
+      await apiDelete(`${jobsEndpoint}/${id}`);
       setMessage("Job deleted.");
       await fetchJobs();
     } catch (e: any) {
