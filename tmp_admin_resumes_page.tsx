@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
@@ -225,7 +225,7 @@ export default function AdminResumesPage() {
   };
 
   // Entry point: user selects multiple files
-  const onBulkFilesSelected = async (files: File[] | null) => {
+  const onBulkFilesSelected = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
     setError(null);
     setMessage(null);
@@ -233,7 +233,7 @@ export default function AdminResumesPage() {
     setBulkUploaded(0);
     setBulkSkipped(0);
     setBulkFailed(0);
-    const queue = files.slice();
+    const queue = Array.from(files);
     setBulkQueue(queue);
     bulkQueueRef.current = queue;
     setBulkUploading(true);
@@ -406,13 +406,7 @@ export default function AdminResumesPage() {
               type="file"
               multiple
               accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-              onChange={(e) => {
-                const fl = e.target.files;
-                const files = fl ? Array.from(fl) : [];
-                // Clear after capturing files so repeated same selection still fires later
-                (e.target as HTMLInputElement).value = '';
-                onBulkFilesSelected(files);
-              }}
+              onChange={(e) => { const f = e.target.files; (e.target as HTMLInputElement).value = ''; onBulkFilesSelected(f); }}
               className="hidden"
             />
             <div className="flex items-center gap-3">
@@ -422,11 +416,11 @@ export default function AdminResumesPage() {
                 onClick={() => document.getElementById('bulkInput')?.click()}
                 className="rounded border dark:border-white/10 px-4 py-2 text-sm"
               >
-                {bulkUploading ? 'Processing' : 'Select Multiple Resumes'}
+                {bulkUploading ? 'Processing�' : 'Select Multiple Resumes'}
               </button>
               {bulkUploading && (
                 <span className="text-xs text-gray-600 dark:text-gray-400">
-                  Processed: {bulkProcessed}  Uploaded: {bulkUploaded}  Skipped: {bulkSkipped}  Failed: {bulkFailed}
+                  Processed: {bulkProcessed} � Uploaded: {bulkUploaded} � Skipped: {bulkSkipped} � Failed: {bulkFailed}
                 </span>
               )}
             </div>
@@ -489,7 +483,7 @@ export default function AdminResumesPage() {
               </div>
               <div className="mt-4 flex items-center justify-between">
                 <div className="text-xs text-gray-500">
-                  {bulkParsing ? 'Parsing' : 'Review and confirm to upload.'}
+                  {bulkParsing ? 'Parsing�' : 'Review and confirm to upload.'}
                 </div>
                 <div className="flex items-center gap-2">
                   <button type="button" className="rounded-md border dark:border-white/10 px-3 py-1.5 text-sm" onClick={skipBulkUpload}>Skip</button>
@@ -555,7 +549,7 @@ export default function AdminResumesPage() {
               {typeof total === 'number' && (
                 <span className="rounded-full border dark:border-white/10 px-2 py-0.5">{resumes.length} / {total}</span>
               )}
-              {loading && <span className="ml-2">Loading</span>}
+              {loading && <span className="ml-2">Loading�</span>}
             </div>
           </div>
           <div className="grid grid-cols-1 gap-4">
