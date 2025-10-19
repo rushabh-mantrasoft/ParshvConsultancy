@@ -1,6 +1,6 @@
-﻿'use client';
+'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { apiGet, apiPost, apiPut, apiDelete, apiGetWithHeaders } from '@/lib/api';
@@ -67,6 +67,19 @@ export default function AdminResumesPage() {
   const [bulkUploaded, setBulkUploaded] = useState(0);
   const [bulkSkipped, setBulkSkipped] = useState(0);
   const [bulkFailed, setBulkFailed] = useState(0);
+  const [bulkQueue, setBulkQueue] = useState<File[]>([]);
+  const bulkQueueRef = useRef<File[]>([]);
+  const [bulkIndex, setBulkIndex] = useState(0);
+  const [bulkModalOpen, setBulkModalOpen] = useState(false);
+  const [bulkParsing, setBulkParsing] = useState(false);
+  const [bulkCurrentFile, setBulkCurrentFile] = useState<File | null>(null);
+  const [bulkForm, setBulkForm] = useState({
+    candidate_name: '',
+    email: '',
+    phone: '',
+    skills: '',
+    education: '',
+  });
 
   // edit
   const [editId, setEditId] = useState<number | null>(null);
@@ -171,86 +184,95 @@ export default function AdminResumesPage() {
     }
   };
 
-  // Sequential multi-upload with per-file confirmation
+  // Bulk flow helpers
+  const loadPreviewIntoBulkForm = async (file: File) => {
+    setBulkParsing(true);
+    try {
+      const fdPrev = new FormData();
+      fdPrev.append('resume', file);
+      const preview = await apiPost<{
+        candidate_name: string; email: string; phone: string; skills: string; education: string;
+      }>('/api/resumes/preview', fdPrev);
+      setBulkForm({
+        candidate_name: preview?.candidate_name || '',
+        email: preview?.email || '',
+        phone: preview?.phone || '',
+        skills: preview?.skills || '',
+        education: preview?.education || '',
+      });
+    } catch {
+      setBulkForm({ candidate_name: '', email: '', phone: '', skills: '', education: '' });
+    } finally {
+      setBulkParsing(false);
+    }
+  };
+
+  const processNextBulk = async (idx: number) => {
+    const queue = bulkQueueRef.current;
+    if (idx >= queue.length) {
+      // done
+      setBulkUploading(false);
+      await fetchResumes(true);
+      setMessage(`Bulk upload finished. Uploaded: ${bulkUploaded} | Skipped: ${bulkSkipped} | Failed: ${bulkFailed}.`);
+      return;
+    }
+    const file = queue[idx];
+    setBulkIndex(idx);
+    setBulkCurrentFile(file);
+    await loadPreviewIntoBulkForm(file);
+    setBulkModalOpen(true);
+  };
+
+  // Entry point: user selects multiple files
   const onBulkFilesSelected = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
     setError(null);
     setMessage(null);
-    setBulkUploading(true);
     setBulkProcessed(0);
     setBulkUploaded(0);
     setBulkSkipped(0);
     setBulkFailed(0);
+    const queue = Array.from(files);
+    setBulkQueue(queue);
+    bulkQueueRef.current = queue;
+    setBulkUploading(true);
+    await processNextBulk(0);
+  };
 
-    // local counters to avoid async state timing
-    let cProcessed = 0;
-    let cUploaded = 0;
-    let cSkipped = 0;
-    let cFailed = 0;
-
+  // Modal actions
+  const submitBulkUpload = async () => {
+    const file = bulkCurrentFile;
+    if (!file) return;
     try {
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-
-        // Parse preview first
-        let preview: { candidate_name: string; email: string; phone: string; skills: string; education: string } | null = null;
-        try {
-          const fdPrev = new FormData();
-          fdPrev.append('resume', file);
-          preview = await apiPost('/api/resumes/preview', fdPrev);
-        } catch (e) {
-          preview = null;
-        }
-
-        const candidate_name = preview?.candidate_name || '';
-        const email = preview?.email || '';
-        const phone = preview?.phone || '';
-        const skills = preview?.skills || '';
-        const education = preview?.education || '';
-
-        const short = (s: string, n = 140) => (s && s.length > n ? s.slice(0, n) + '…' : s || '');
-        const summary = `File: ${file.name}\n\n` +
-          `Name: ${candidate_name || '(not detected)'}\n` +
-          `Email: ${email || '(not detected)'}\n` +
-          `Phone: ${phone || '(not detected)'}\n` +
-          `Skills: ${short(skills)}\n` +
-          `Education: ${short(education)}\n\n` +
-          `Upload this resume?`;
-
-        const ok = window.confirm(summary);
-        if (!ok) {
-          cSkipped += 1;
-          setBulkSkipped(cSkipped);
-          cProcessed += 1;
-          setBulkProcessed(cProcessed);
-          continue;
-        }
-
-        try {
-          const fd = new FormData();
-          if (candidate_name) fd.append('candidate_name', candidate_name);
-          if (email) fd.append('email', email);
-          if (phone) fd.append('phone', phone);
-          if (skills) fd.append('skills', skills);
-          if (education) fd.append('education', education);
-          fd.append('resume', file);
-          await apiPost('/api/resumes', fd);
-          cUploaded += 1;
-          setBulkUploaded(cUploaded);
-        } catch (e) {
-          cFailed += 1;
-          setBulkFailed(cFailed);
-        } finally {
-          cProcessed += 1;
-          setBulkProcessed(cProcessed);
-        }
-      }
-
-      await fetchResumes(true);
-      setMessage(`Bulk upload finished. Uploaded: ${cUploaded} | Skipped: ${cSkipped} | Failed: ${cFailed}.`);
+      const fd = new FormData();
+      if (bulkForm.candidate_name) fd.append('candidate_name', bulkForm.candidate_name);
+      if (bulkForm.email) fd.append('email', bulkForm.email);
+      if (bulkForm.phone) fd.append('phone', bulkForm.phone);
+      if (bulkForm.skills) fd.append('skills', bulkForm.skills);
+      if (bulkForm.education) fd.append('education', bulkForm.education);
+      fd.append('resume', file);
+      await apiPost('/api/resumes', fd);
+      setBulkUploaded((v) => v + 1);
+    } catch {
+      setBulkFailed((v) => v + 1);
     } finally {
-      setBulkUploading(false);
+      setBulkProcessed((v) => v + 1);
+      setBulkModalOpen(false);
+      await processNextBulk(bulkIndex + 1);
     }
+  };
+
+  const skipBulkUpload = async () => {
+    setBulkSkipped((v) => v + 1);
+    setBulkProcessed((v) => v + 1);
+    setBulkModalOpen(false);
+    await processNextBulk(bulkIndex + 1);
+  };
+
+  const cancelBulkUpload = () => {
+    setBulkModalOpen(false);
+    setBulkUploading(false);
+    setMessage(`Bulk upload cancelled. Processed: ${bulkProcessed}, Uploaded: ${bulkUploaded}, Skipped: ${bulkSkipped}, Failed: ${bulkFailed}.`);
   };
 
   const onSearch = async (e: React.FormEvent) => {
@@ -391,11 +413,11 @@ export default function AdminResumesPage() {
                 onClick={() => document.getElementById('bulkInput')?.click()}
                 className="rounded border dark:border-white/10 px-4 py-2 text-sm"
               >
-                {bulkUploading ? 'Processing…' : 'Select Multiple Resumes'}
+                {bulkUploading ? 'Processing�' : 'Select Multiple Resumes'}
               </button>
               {bulkUploading && (
                 <span className="text-xs text-gray-600 dark:text-gray-400">
-                  Processed: {bulkProcessed} • Uploaded: {bulkUploaded} • Skipped: {bulkSkipped} • Failed: {bulkFailed}
+                  Processed: {bulkProcessed} � Uploaded: {bulkUploaded} � Skipped: {bulkSkipped} � Failed: {bulkFailed}
                 </span>
               )}
             </div>
@@ -409,6 +431,57 @@ export default function AdminResumesPage() {
             </form>
           )}
         </div>
+
+        {/* Bulk confirmation modal */}
+        {bulkModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/50" onClick={cancelBulkUpload} />
+            <div className="relative z-10 w-[95vw] max-w-2xl rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/10 shadow-lg p-5">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Confirm Resume Upload</h3>
+                <button className="text-sm text-gray-500 hover:underline" onClick={cancelBulkUpload}>Cancel all</button>
+              </div>
+              <div className="text-xs text-gray-600 dark:text-gray-400 mb-3">
+                {bulkCurrentFile ? `File ${bulkIndex + 1} of ${bulkQueue.length}: ${bulkCurrentFile.name}` : ''}
+              </div>
+              <div className="grid gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Candidate name</label>
+                    <input className="w-full rounded-md border border-gray-300 dark:border-white/10 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition" value={bulkForm.candidate_name} onChange={(e) => setBulkForm({ ...bulkForm, candidate_name: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
+                    <input className="w-full rounded-md border border-gray-300 dark:border-white/10 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition" value={bulkForm.email} onChange={(e) => setBulkForm({ ...bulkForm, email: e.target.value })} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Phone</label>
+                    <input className="w-full rounded-md border border-gray-300 dark:border-white/10 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition" value={bulkForm.phone} onChange={(e) => setBulkForm({ ...bulkForm, phone: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Education</label>
+                    <input className="w-full rounded-md border border-gray-300 dark:border-white/10 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition" value={bulkForm.education} onChange={(e) => setBulkForm({ ...bulkForm, education: e.target.value })} />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Skills (comma separated)</label>
+                  <input className="w-full rounded-md border border-gray-300 dark:border-white/10 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition" value={bulkForm.skills} onChange={(e) => setBulkForm({ ...bulkForm, skills: e.target.value })} />
+                </div>
+              </div>
+              <div className="mt-4 flex items-center justify-between">
+                <div className="text-xs text-gray-500">
+                  {bulkParsing ? 'Parsing�' : 'Review and confirm to upload.'}
+                </div>
+                <div className="flex items-center gap-2">
+                  <button type="button" className="rounded-md border dark:border-white/10 px-3 py-1.5 text-sm" onClick={skipBulkUpload}>Skip</button>
+                  <button type="button" className="rounded-md bg-primary text-white px-3 py-1.5 text-sm" onClick={submitBulkUpload} disabled={bulkParsing}>Upload</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Search */}
         <form
@@ -465,7 +538,7 @@ export default function AdminResumesPage() {
               {typeof total === 'number' && (
                 <span className="rounded-full border dark:border-white/10 px-2 py-0.5">{resumes.length} / {total}</span>
               )}
-              {loading && <span className="ml-2">Loading…</span>}
+              {loading && <span className="ml-2">Loading�</span>}
             </div>
           </div>
           <div className="grid grid-cols-1 gap-4">
@@ -555,6 +628,7 @@ export default function AdminResumesPage() {
     </div>
   );
 }
+
 
 
 
