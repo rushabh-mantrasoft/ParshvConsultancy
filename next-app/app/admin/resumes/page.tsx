@@ -82,8 +82,8 @@ export default function AdminResumesPage() {
     e.preventDefault();
     setError(null);
     setMessage(null);
-    if (!form.candidate_name || !form.email || !form.phone || !form.file) {
-      setError('Name, email, phone, and resume file are required');
+    if (!form.file) {
+      setError('Please choose a resume file to upload');
       return;
     }
     setUploading(true);
@@ -186,13 +186,14 @@ export default function AdminResumesPage() {
           {/* Upload form */}
           <form onSubmit={onUpload} className="space-y-3 bg-white dark:bg-gray-900 border dark:border-white/10 p-6 rounded">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Upload Resume</h2>
-            <input placeholder="Candidate name" className="w-full rounded border-gray-300 dark:bg-gray-950 dark:border-white/10" value={form.candidate_name} onChange={(e) => setForm({ ...form, candidate_name: e.target.value })} required />
+            <p className="text-sm text-gray-500 dark:text-gray-400">Leave fields blank to auto-fill using the resume parser.</p>
+            <input placeholder="Candidate name (optional)" className="w-full rounded border-gray-300 dark:bg-gray-950 dark:border-white/10" value={form.candidate_name} onChange={(e) => setForm({ ...form, candidate_name: e.target.value })} />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <input placeholder="Email" type="email" className="w-full rounded border-gray-300 dark:bg-gray-950 dark:border-white/10" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
-              <input placeholder="Phone" className="w-full rounded border-gray-300 dark:bg-gray-950 dark:border-white/10" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} required />
+              <input placeholder="Email (optional)" type="email" className="w-full rounded border-gray-300 dark:bg-gray-950 dark:border-white/10" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+              <input placeholder="Phone (optional)" className="w-full rounded border-gray-300 dark:bg-gray-950 dark:border-white/10" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
             </div>
-            <input placeholder="Skills (comma separated)" className="w-full rounded border-gray-300 dark:bg-gray-950 dark:border-white/10" value={form.skills} onChange={(e) => setForm({ ...form, skills: e.target.value })} />
-            <input placeholder="Education" className="w-full rounded border-gray-300 dark:bg-gray-950 dark:border-white/10" value={form.education} onChange={(e) => setForm({ ...form, education: e.target.value })} />
+            <input placeholder="Skills (comma separated, optional)" className="w-full rounded border-gray-300 dark:bg-gray-950 dark:border-white/10" value={form.skills} onChange={(e) => setForm({ ...form, skills: e.target.value })} />
+            <input placeholder="Education (optional)" className="w-full rounded border-gray-300 dark:bg-gray-950 dark:border-white/10" value={form.education} onChange={(e) => setForm({ ...form, education: e.target.value })} />
             <input type="file" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={(e) => setForm({ ...form, file: e.target.files?.[0] || null })} />
             <button disabled={uploading} className="rounded bg-primary text-white px-4 py-2">{uploading ? 'Uploading...' : 'Upload'}</button>
           </form>
@@ -257,4 +258,3 @@ export default function AdminResumesPage() {
     </div>
   );
 }
-

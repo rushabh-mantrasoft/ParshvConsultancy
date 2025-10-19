@@ -7,6 +7,7 @@ const fsPromises = fs.promises;
 const db = require('../config/db');
 const { requireAuth } = require('../middleware/auth');
 const { body, query, validationResult } = require('express-validator');
+const { parseResume } = require('../utils/resumeParser');
 
 // Ensure uploads directory exists
 const uploadsDir = path.join(__dirname, '..', 'uploads');
@@ -89,35 +90,45 @@ router.post(
     const { candidate_name, email, phone, skills, education } = req.body || {};
     const file = req.file;
 
-    if (!candidate_name || !email || !phone || !file) {
-      if (file) {
-        await removeFileIfExists(file.path);
-      }
-      return res
-        .status(400)
-        .json({ message: 'Candidate name, email, phone and resume file are required' });
-    }
-
     try {
+      // Auto-parse resume text to extract fields if missing
+      let extracted = { name: null, email: null, phone: null, skills: '', education: '' };
+      if (file) {
+        try {
+          extracted = await parseResume(file.path, file.mimetype);
+        } catch (e) {
+          console.warn('Resume parsing failed', e.message);
+        }
+      }
+
+      const finalName = (candidate_name || extracted.name || '').toString().trim();
+      const finalEmail = (email || extracted.email || '').toString().trim();
+      const finalPhone = (phone || extracted.phone || '').toString().trim();
+      const finalSkills = (skills || extracted.skills || '').toString().trim();
+      const finalEducation = (education || extracted.education || '').toString().trim();
+
+      // Require at least one contact method and a name if parsing fails
+      const missing = [];
+      if (!finalName) missing.push('candidate_name');
+      if (!finalEmail && !finalPhone) missing.push('email or phone');
+      if (!file) missing.push('resume file');
+      if (missing.length) {
+        if (file) await removeFileIfExists(file.path);
+        return res.status(400).json({ message: `Missing required fields: ${missing.join(', ')}` });
+      }
+
       const [result] = await db.query(
         'INSERT INTO resumes (candidate_name, email, phone, skills, education, resume_path, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())',
-        [
-          candidate_name.trim(),
-          email.trim(),
-          phone.trim(),
-          (skills || '').toString().trim(),
-          (education || '').toString().trim(),
-          path.basename(file.filename),
-        ]
+        [finalName, finalEmail, finalPhone, finalSkills, finalEducation, path.basename(file.filename)]
       );
 
       res.status(201).json({
         id: result.insertId,
-        candidate_name: candidate_name.trim(),
-        email: email.trim(),
-        phone: phone.trim(),
-        skills: (skills || '').toString().trim(),
-        education: (education || '').toString().trim(),
+        candidate_name: finalName,
+        email: finalEmail,
+        phone: finalPhone,
+        skills: finalSkills,
+        education: finalEducation,
         resume_path: path.basename(file.filename),
       });
     } catch (dbError) {
