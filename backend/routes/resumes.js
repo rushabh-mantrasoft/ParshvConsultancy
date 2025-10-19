@@ -183,6 +183,42 @@ router.put(
   }
 );
 
+// POST /api/resumes/preview - parse resume and return extracted fields without saving
+router.post('/preview', requireAuth, (req, res) => {
+  upload.single('resume')(req, res, async (err) => {
+    if (err) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({ message: 'Resume file is too large (max 5 MB)' });
+      }
+      if (err.code === 'UNSUPPORTED_FILE_TYPE') {
+        return res.status(400).json({ message: 'Only PDF or Word documents are accepted' });
+      }
+      console.error('Resume preview upload failed', err);
+      return res.status(500).json({ error: 'File upload failed' });
+    }
+
+    const file = req.file;
+    if (!file) {
+      return res.status(400).json({ message: 'Resume file is required' });
+    }
+    try {
+      const extracted = await parseResume(file.path, file.mimetype);
+      await removeFileIfExists(file.path);
+      return res.json({
+        candidate_name: extracted.name || '',
+        email: extracted.email || '',
+        phone: extracted.phone || '',
+        skills: extracted.skills || '',
+        education: extracted.education || '',
+      });
+    } catch (e) {
+      console.error('Resume parsing failed', e);
+      await removeFileIfExists(file.path);
+      return res.status(500).json({ message: 'Failed to parse resume' });
+    }
+  });
+});
+
 // DELETE /api/resumes/:id - delete resume and file
 router.delete('/:id', requireAuth, async (req, res) => {
   const { id } = req.params;

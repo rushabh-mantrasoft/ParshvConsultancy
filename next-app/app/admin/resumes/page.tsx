@@ -43,6 +43,7 @@ export default function AdminResumesPage() {
     file: null as File | null,
   });
   const [uploading, setUploading] = useState(false);
+  const [previewing, setPreviewing] = useState(false);
 
   // edit
   const [editId, setEditId] = useState<number | null>(null);
@@ -103,6 +104,37 @@ export default function AdminResumesPage() {
       setError(e.message ?? 'Upload failed');
     } finally {
       setUploading(false);
+    }
+  };
+
+  const onPreview = async () => {
+    setError(null);
+    setMessage(null);
+    if (!form.file) {
+      setError('Please choose a resume file to preview');
+      return;
+    }
+    setPreviewing(true);
+    try {
+      const fd = new FormData();
+      fd.append('resume', form.file);
+      const data = await apiPost<{ candidate_name: string; email: string; phone: string; skills: string; education: string }>(
+        '/api/resumes/preview',
+        fd
+      );
+      setForm((prev) => ({
+        ...prev,
+        candidate_name: prev.candidate_name || data.candidate_name || '',
+        email: prev.email || data.email || '',
+        phone: prev.phone || data.phone || '',
+        skills: prev.skills || data.skills || '',
+        education: prev.education || data.education || '',
+      }));
+      setMessage('Parsed fields applied. Please review and click Save.');
+    } catch (e: any) {
+      setError(e.message ?? 'Preview failed');
+    } finally {
+      setPreviewing(false);
     }
   };
 
@@ -195,7 +227,12 @@ export default function AdminResumesPage() {
             <input placeholder="Skills (comma separated, optional)" className="w-full rounded border-gray-300 dark:bg-gray-950 dark:border-white/10" value={form.skills} onChange={(e) => setForm({ ...form, skills: e.target.value })} />
             <input placeholder="Education (optional)" className="w-full rounded border-gray-300 dark:bg-gray-950 dark:border-white/10" value={form.education} onChange={(e) => setForm({ ...form, education: e.target.value })} />
             <input type="file" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={(e) => setForm({ ...form, file: e.target.files?.[0] || null })} />
-            <button disabled={uploading} className="rounded bg-primary text-white px-4 py-2">{uploading ? 'Uploading...' : 'Upload'}</button>
+            <div className="flex items-center gap-3">
+              <button type="button" onClick={onPreview} disabled={previewing || !form.file} className="rounded border dark:border-white/10 px-4 py-2">
+                {previewing ? 'Parsing…' : 'Parse & Preview'}
+              </button>
+              <button disabled={uploading} className="rounded bg-primary text-white px-4 py-2">{uploading ? 'Saving…' : 'Save Resume'}</button>
+            </div>
           </form>
 
           {/* List */}

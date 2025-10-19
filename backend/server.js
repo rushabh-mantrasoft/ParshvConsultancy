@@ -15,7 +15,15 @@ const PORT = process.env.PORT || 4000;
 
 // Middleware
 const corsOrigin = process.env.CORS_ORIGIN || '*';
-app.use(cors({ origin: corsOrigin }));
+const corsConfig = {
+  origin: corsOrigin,
+  methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: false,
+};
+app.use(cors(corsConfig));
+// Handle CORS preflight for all routes
+app.options('*', cors(corsConfig));
 app.use(helmet());
 app.use(express.json());
 if (process.env.NODE_ENV !== 'production') {
