@@ -235,8 +235,17 @@ export default function AdminResumesPage() {
         {message && <div className="mb-4 p-3 rounded bg-green-50 text-green-700 border border-green-200">{message}</div>}
         {error && <div className="mb-4 p-3 rounded bg-red-50 text-red-700 border border-red-200">{error}</div>}
 
+        {/* Sticky toolbar */}
+        <div className="sticky top-16 z-20 mb-4">
+          <div className="flex items-center gap-2 bg-white/90 dark:bg-gray-900/90 backdrop-blur supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-gray-900/60 border dark:border-white/10 rounded-full px-3 py-2 shadow">
+            <a href="#upload" className="text-sm px-3 py-1.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10">Upload</a>
+            <a href="#search" className="text-sm px-3 py-1.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10">Search</a>
+            <a href="#results" className="text-sm px-3 py-1.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10">Results</a>
+          </div>
+        </div>
+
         {/* Upload form (collapsible, full width) */}
-        <div className="rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 shadow-sm mb-6">
+        <div id="upload" className="rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 shadow-sm mb-6 scroll-mt-24">
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-white/10">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Upload Resume</h2>
             <button
@@ -279,14 +288,14 @@ export default function AdminResumesPage() {
         </div>
 
         {/* Search */}
-        <form onSubmit={onSearch} className="mb-6 grid grid-cols-1 md:grid-cols-6 gap-3 bg-white dark:bg-gray-900 border dark:border-white/10 p-4 rounded">
+        <form id="search" onSubmit={onSearch} className="mb-6 grid grid-cols-1 md:grid-cols-6 gap-3 bg-white dark:bg-gray-900 border dark:border-white/10 p-4 rounded scroll-mt-24">
           <input className="md:col-span-3 rounded border-gray-300 dark:bg-gray-950 dark:border-white/10" placeholder="Search text (name, email, education)" value={q} onChange={(e) => setQ(e.target.value)} />
           <input className="md:col-span-2 rounded border-gray-300 dark:bg-gray-950 dark:border-white/10" placeholder="Skills (comma separated)" value={skillQuery} onChange={(e) => setSkillQuery(e.target.value)} />
           <button className="md:col-span-1 rounded bg-primary text-white px-4 py-2">Search</button>
         </form>
 
         {/* List (full width) */}
-        <div className="bg-white dark:bg-gray-900 border dark:border-white/10 p-6 rounded">
+        <div id="results" className="bg-white dark:bg-gray-900 border dark:border-white/10 p-6 rounded scroll-mt-24">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">All Resumes</h2>
             <div className="text-sm text-gray-500">
@@ -372,8 +381,6 @@ export default function AdminResumesPage() {
     </div>
   );
 }
-
-
 
 
 
