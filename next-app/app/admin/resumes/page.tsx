@@ -32,6 +32,11 @@ export default function AdminResumesPage() {
   // search
   const [q, setQ] = useState('');
   const [skillQuery, setSkillQuery] = useState('');
+  const PAGE_SIZE = 20;
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [expSkills, setExpSkills] = useState<Record<number, boolean>>({});
+  const [expEdu, setExpEdu] = useState<Record<number, boolean>>({});
 
   // upload form
   const [form, setForm] = useState({
@@ -62,16 +67,24 @@ export default function AdminResumesPage() {
       router.push('/admin/login');
       return;
     }
-    void fetchResumes();
+    void fetchResumes(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
-  const fetchResumes = async () => {
+  const fetchResumes = async (reset = false) => {
     setLoading(true);
     setError(null);
     try {
-      const data = await apiGet<Resume[]>('/api/resumes');
-      setResumes(data);
+      const qs = new URLSearchParams();
+      qs.set('limit', String(PAGE_SIZE));
+      qs.set('offset', String(reset ? 0 : offset));
+      const base = q || skillQuery ? '/api/resumes/search' : '/api/resumes';
+      if (q) qs.set('q', q);
+      if (skillQuery) qs.set('skills', skillQuery);
+      const data = await apiGet<Resume[]>(`${base}?${qs.toString()}`);
+      setResumes((prev) => (reset ? data : [...prev, ...data]));
+      setHasMore(data.length === PAGE_SIZE);
+      setOffset((prev) => (reset ? data.length : prev + data.length));
     } catch (e: any) {
       setError(e.message ?? 'Failed to load resumes');
     } finally {
@@ -99,7 +112,7 @@ export default function AdminResumesPage() {
       await apiPost('/api/resumes', fd);
       setMessage('Resume uploaded');
       setForm({ candidate_name: '', email: '', phone: '', skills: '', education: '', file: null });
-      await fetchResumes();
+      await fetchResumes(true);
     } catch (e: any) {
       setError(e.message ?? 'Upload failed');
     } finally {
@@ -142,15 +155,8 @@ export default function AdminResumesPage() {
     e.preventDefault();
     setError(null);
     setMessage(null);
-    try {
-      const params = new URLSearchParams();
-      if (q) params.set('q', q);
-      if (skillQuery) params.set('skills', skillQuery);
-      const data = await apiGet<Resume[]>(`/api/resumes/search?${params.toString()}`);
-      setResumes(data);
-    } catch (e: any) {
-      setError(e.message ?? 'Search failed');
-    }
+    setOffset(0);
+    await fetchResumes(true);
   };
 
   const startEdit = (r: Resume) => {
@@ -169,7 +175,7 @@ export default function AdminResumesPage() {
       await apiPut(`/api/resumes/${id}`, editForm);
       setMessage('Resume updated');
       setEditId(null);
-      await fetchResumes();
+      await fetchResumes(true);
     } catch (e: any) {
       setError(e.message ?? 'Update failed');
     }
@@ -180,7 +186,7 @@ export default function AdminResumesPage() {
     try {
       await apiDelete(`/api/resumes/${id}`);
       setMessage('Resume deleted');
-      await fetchResumes();
+      await fetchResumes(true);
     } catch (e: any) {
       setError(e.message ?? 'Delete failed');
     }
@@ -207,6 +213,26 @@ export default function AdminResumesPage() {
         {message && <div className="mb-4 p-3 rounded bg-green-50 text-green-700 border border-green-200">{message}</div>}
         {error && <div className="mb-4 p-3 rounded bg-red-50 text-red-700 border border-red-200">{error}</div>}
 
+        {/* Upload form (full width) */}
+        <form onSubmit={onUpload} className="space-y-3 bg-white dark:bg-gray-900 border dark:border-white/10 p-6 rounded mb-8">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Upload Resume</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Leave fields blank to auto-fill using the resume parser.</p>
+          <input placeholder="Candidate name (optional)" className="w-full rounded border-gray-300 dark:bg-gray-950 dark:border-white/10" value={form.candidate_name} onChange={(e) => setForm({ ...form, candidate_name: e.target.value })} />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <input placeholder="Email (optional)" type="email" className="w-full rounded border-gray-300 dark:bg-gray-950 dark:border-white/10" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+            <input placeholder="Phone (optional)" className="w-full rounded border-gray-300 dark:bg-gray-950 dark:border-white/10" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+          </div>
+          <input placeholder="Skills (comma separated, optional)" className="w-full rounded border-gray-300 dark:bg-gray-950 dark:border-white/10" value={form.skills} onChange={(e) => setForm({ ...form, skills: e.target.value })} />
+          <input placeholder="Education (optional)" className="w-full rounded border-gray-300 dark:bg-gray-950 dark:border-white/10" value={form.education} onChange={(e) => setForm({ ...form, education: e.target.value })} />
+          <input type="file" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={(e) => setForm({ ...form, file: e.target.files?.[0] || null })} />
+          <div className="flex items-center gap-3">
+            <button type="button" onClick={onPreview} disabled={previewing || !form.file} className="rounded border dark:border-white/10 px-4 py-2">
+              {previewing ? 'Parsing...' : 'Parse & Preview'}
+            </button>
+            <button disabled={uploading} className="rounded bg-primary text-white px-4 py-2">{uploading ? 'Saving...' : 'Save Resume'}</button>
+          </div>
+        </form>
+
         {/* Search */}
         <form onSubmit={onSearch} className="mb-6 grid grid-cols-1 md:grid-cols-6 gap-3 bg-white dark:bg-gray-900 border dark:border-white/10 p-4 rounded">
           <input className="md:col-span-3 rounded border-gray-300 dark:bg-gray-950 dark:border-white/10" placeholder="Search text (name, email, education)" value={q} onChange={(e) => setQ(e.target.value)} />
@@ -214,84 +240,92 @@ export default function AdminResumesPage() {
           <button className="md:col-span-1 rounded bg-primary text-white px-4 py-2">Search</button>
         </form>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Upload form */}
-          <form onSubmit={onUpload} className="space-y-3 bg-white dark:bg-gray-900 border dark:border-white/10 p-6 rounded">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Upload Resume</h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Leave fields blank to auto-fill using the resume parser.</p>
-            <input placeholder="Candidate name (optional)" className="w-full rounded border-gray-300 dark:bg-gray-950 dark:border-white/10" value={form.candidate_name} onChange={(e) => setForm({ ...form, candidate_name: e.target.value })} />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <input placeholder="Email (optional)" type="email" className="w-full rounded border-gray-300 dark:bg-gray-950 dark:border-white/10" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-              <input placeholder="Phone (optional)" className="w-full rounded border-gray-300 dark:bg-gray-950 dark:border-white/10" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-            </div>
-            <input placeholder="Skills (comma separated, optional)" className="w-full rounded border-gray-300 dark:bg-gray-950 dark:border-white/10" value={form.skills} onChange={(e) => setForm({ ...form, skills: e.target.value })} />
-            <input placeholder="Education (optional)" className="w-full rounded border-gray-300 dark:bg-gray-950 dark:border-white/10" value={form.education} onChange={(e) => setForm({ ...form, education: e.target.value })} />
-            <input type="file" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={(e) => setForm({ ...form, file: e.target.files?.[0] || null })} />
-            <div className="flex items-center gap-3">
-              <button type="button" onClick={onPreview} disabled={previewing || !form.file} className="rounded border dark:border-white/10 px-4 py-2">
-                {previewing ? 'Parsing…' : 'Parse & Preview'}
-              </button>
-              <button disabled={uploading} className="rounded bg-primary text-white px-4 py-2">{uploading ? 'Saving…' : 'Save Resume'}</button>
-            </div>
-          </form>
-
-          {/* List */}
-          <div className="bg-white dark:bg-gray-900 border dark:border-white/10 p-6 rounded">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">All Resumes</h2>
-              {loading && <span className="text-sm text-gray-500">Loading...</span>}
-            </div>
-            <div className="divide-y dark:divide-white/10">
-              {!loading && resumes.length === 0 && (
-                <p className="text-gray-500">No resumes yet.</p>
-              )}
-              {resumes.map((r) => (
-                <div key={r.id} className="py-4">
-                  {editId === r.id ? (
-                    <div className="space-y-2">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        <input className="rounded border-gray-300 dark:bg-gray-950 dark:border-white/10" value={editForm.candidate_name} onChange={(e) => setEditForm({ ...editForm, candidate_name: e.target.value })} />
-                        <input className="rounded border-gray-300 dark:bg-gray-950 dark:border-white/10" value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} />
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        <input className="rounded border-gray-300 dark:bg-gray-950 dark:border-white/10" value={editForm.phone} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} />
-                        <input className="rounded border-gray-300 dark:bg-gray-950 dark:border-white/10" value={editForm.education} onChange={(e) => setEditForm({ ...editForm, education: e.target.value })} />
-                      </div>
-                      <input className="rounded border-gray-300 dark:bg-gray-950 dark:border-white/10" placeholder="Skills" value={editForm.skills} onChange={(e) => setEditForm({ ...editForm, skills: e.target.value })} />
-                      <div className="space-x-2">
-                        <button className="px-3 py-1 rounded bg-primary text-white" onClick={() => saveEdit(r.id)}>Save</button>
-                        <button className="px-3 py-1 rounded border dark:border-white/10" onClick={() => setEditId(null)}>Cancel</button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <div className="font-semibold text-gray-900 dark:text-gray-100">{r.candidate_name}</div>
-                        <div className="text-sm text-gray-600 dark:text-gray-400">{r.email} - {r.phone}</div>
-                        {r.education && <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">Education: {r.education}</div>}
-                        {r.skills && (
-                          <div className="mt-2 flex flex-wrap gap-2">
-                            {r.skills.split(',').map((s) => (
-                              <span key={s} className="text-xs rounded-full px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border dark:border-white/10">{s.trim()}</span>
-                            ))}
-                          </div>
-                        )}
-                        <div className="mt-2">
-                          <a href={`${API_BASE_URL}/uploads/${r.resume_path}`} target="_blank" rel="noreferrer" className="text-sm text-primary underline">Download resume</a>
-                        </div>
-                      </div>
-                      <div className="shrink-0 space-x-2">
-                        <button className="px-3 py-1 rounded border dark:border-white/10" onClick={() => startEdit(r)}>Edit</button>
-                        <button className="px-3 py-1 rounded border border-red-300 text-red-600" onClick={() => remove(r.id)}>Delete</button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
+        {/* List (full width) */}
+        <div className="bg-white dark:bg-gray-900 border dark:border-white/10 p-6 rounded">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">All Resumes</h2>
+            {loading && <span className="text-sm text-gray-500">Loading...</span>}
           </div>
+          <div className="divide-y dark:divide-white/10">
+            {!loading && resumes.length === 0 && (
+              <p className="text-gray-500">No resumes yet.</p>
+            )}
+            {resumes.map((r) => (
+              <div key={r.id} className="py-4">
+                {editId === r.id ? (
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      <input className="rounded border-gray-300 dark:bg-gray-950 dark:border-white/10" value={editForm.candidate_name} onChange={(e) => setEditForm({ ...editForm, candidate_name: e.target.value })} />
+                      <input className="rounded border-gray-300 dark:bg-gray-950 dark:border-white/10" value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      <input className="rounded border-gray-300 dark:bg-gray-950 dark:border-white/10" value={editForm.phone} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} />
+                      <input className="rounded border-gray-300 dark:bg-gray-950 dark:border-white/10" value={editForm.education} onChange={(e) => setEditForm({ ...editForm, education: e.target.value })} />
+                    </div>
+                    <input className="rounded border-gray-300 dark:bg-gray-950 dark:border-white/10" placeholder="Skills" value={editForm.skills} onChange={(e) => setEditForm({ ...editForm, skills: e.target.value })} />
+                    <div className="space-x-2">
+                      <button className="px-3 py-1 rounded bg-primary text-white" onClick={() => saveEdit(r.id)}>Save</button>
+                      <button className="px-3 py-1 rounded border dark:border-white/10" onClick={() => setEditId(null)}>Cancel</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <div className="font-semibold text-gray-900 dark:text-gray-100">{r.candidate_name}</div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">{r.email} - {r.phone}</div>
+                      {r.education && (
+                        <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                          <span className={expEdu[r.id] ? '' : 'line-clamp-2'}>Education: {r.education}</span>
+                          {r.education.length > 160 && (
+                            <button className="ml-2 text-primary underline text-xs" onClick={() => setExpEdu((m) => ({ ...m, [r.id]: !m[r.id] }))}>
+                              {expEdu[r.id] ? 'Show less' : 'Show more'}
+                            </button>
+                          )}
+                        </div>
+                      )}
+                      {r.skills && (() => {
+                        const items = r.skills.split(',').map((s) => s.trim()).filter(Boolean);
+                        const limit = 6;
+                        const showAll = !!expSkills[r.id];
+                        const visible = showAll ? items : items.slice(0, limit);
+                        const hiddenCount = Math.max(items.length - visible.length, 0);
+                        return (
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {visible.map((s) => (
+                              <span key={s} className="text-xs rounded-full px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border dark:border-white/10">{s}</span>
+                            ))}
+                            {hiddenCount > 0 && !showAll && (
+                              <button className="text-xs underline text-primary" onClick={() => setExpSkills((m) => ({ ...m, [r.id]: true }))}>+{hiddenCount} more</button>
+                            )}
+                            {showAll && items.length > limit && (
+                              <button className="text-xs underline text-primary" onClick={() => setExpSkills((m) => ({ ...m, [r.id]: false }))}>Show less</button>
+                            )}
+                          </div>
+                        );
+                      })()}
+                      <div className="mt-2">
+                        <a href={`${API_BASE_URL}/uploads/${r.resume_path}`} target="_blank" rel="noreferrer" className="text-sm text-primary underline">Download resume</a>
+                      </div>
+                    </div>
+                    <div className="shrink-0 space-x-2">
+                      <button className="px-3 py-1 rounded border dark:border-white/10" onClick={() => startEdit(r)}>Edit</button>
+                      <button className="px-3 py-1 rounded border border-red-300 text-red-600" onClick={() => remove(r.id)}>Delete</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+          {hasMore && (
+            <div className="pt-4">
+              <button disabled={loading} onClick={() => fetchResumes(false)} className="rounded border dark:border-white/10 px-4 py-2">
+                {loading ? 'Loading...' : 'Load more'}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
+

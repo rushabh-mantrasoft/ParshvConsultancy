@@ -61,7 +61,14 @@ async function removeFileIfExists(filePath) {
 // Admin-only list resumes
 router.get('/', requireAuth, async (req, res) => {
   try {
-    const [rows] = await db.query('SELECT * FROM resumes ORDER BY created_at DESC');
+    const limit = Math.min(parseInt(req.query.limit, 10) || 20, 100);
+    const offset = Math.max(parseInt(req.query.offset, 10) || 0, 0);
+    const [[{ total }]] = await db.query('SELECT COUNT(*) as total FROM resumes');
+    const [rows] = await db.query(
+      'SELECT * FROM resumes ORDER BY created_at DESC LIMIT ? OFFSET ?',
+      [limit, offset]
+    );
+    res.set('X-Total-Count', String(total));
     res.json(rows);
   } catch (err) {
     console.error(err);
@@ -253,6 +260,8 @@ router.get(
       return res.status(400).json({ message: 'Invalid input', errors: errors.array() });
     }
     const { q, skills } = req.query;
+    const limit = Math.min(parseInt(req.query.limit, 10) || 20, 100);
+    const offset = Math.max(parseInt(req.query.offset, 10) || 0, 0);
     const where = [];
     const params = [];
     if (q) {
@@ -266,9 +275,13 @@ router.get(
         params.push(`%${token}%`);
       }
     }
-    const sql = `SELECT * FROM resumes ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY created_at DESC`;
+    const whereSql = where.length ? 'WHERE ' + where.join(' AND ') : '';
+    const countSql = `SELECT COUNT(*) as total FROM resumes ${whereSql}`;
+    const rowsSql = `SELECT * FROM resumes ${whereSql} ORDER BY created_at DESC LIMIT ? OFFSET ?`;
     try {
-      const [rows] = await db.query(sql, params);
+      const [[{ total }]] = await db.query(countSql, params);
+      const [rows] = await db.query(rowsSql, [...params, limit, offset]);
+      res.set('X-Total-Count', String(total));
       res.json(rows);
     } catch (err) {
       console.error(err);
