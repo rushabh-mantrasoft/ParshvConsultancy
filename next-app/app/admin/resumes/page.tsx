@@ -223,40 +223,50 @@ export default function AdminResumesPage() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 py-10">
       <div className="container mx-auto px-4 max-w-6xl">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Admin: Resumes</h1>
+          <div><h1 className="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-gray-100">Admin: Resumes</h1><p className="text-sm text-gray-500 dark:text-gray-400">Upload, parse, search and manage candidate resumes.</p></div>
           <button onClick={logout} className="text-sm text-red-600 hover:underline">Logout</button>
         </div>
 
         <div className="mb-6 flex items-center gap-3">
-          <Link href="/admin/jobs" className="text-sm px-3 py-1.5 rounded border dark:border-white/10">Jobs</Link>
-          <Link href="/admin/resumes" className="text-sm px-3 py-1.5 rounded bg-primary text-white">Resumes</Link>
+          <Link href="/admin/jobs" className="inline-flex items-center gap-2 rounded-md border border-black/10 dark:border-white/10 px-3 py-1.5 text-sm hover:bg-black/5 dark:hover:bg-white/10">Jobs</Link>
+          <Link href="/admin/resumes" className="inline-flex items-center gap-2 rounded-md bg-primary text-white px-3 py-1.5 text-sm shadow hover:opacity-95">Resumes</Link>
         </div>
 
         {message && <div className="mb-4 p-3 rounded bg-green-50 text-green-700 border border-green-200">{message}</div>}
         {error && <div className="mb-4 p-3 rounded bg-red-50 text-red-700 border border-red-200">{error}</div>}
 
         {/* Upload form (collapsible, full width) */}
-        <div className="bg-white dark:bg-gray-900 border dark:border-white/10 rounded mb-4">
-          <div className="flex items-center justify-between px-6 py-4">
+        <div className="rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 shadow-sm mb-6">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-white/10">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Upload Resume</h2>
             <button
               type="button"
               onClick={() => { setUploadOpen((v) => { const nv = !v; try { localStorage.setItem('admin_upload_open', nv ? '1' : '0'); } catch {}; return nv; }); }}
-              className="text-sm underline"
+              className="inline-flex items-center gap-2 rounded-md border border-black/10 dark:border-white/10 px-3 py-1.5 text-sm hover:bg-black/5 dark:hover:bg-white/10"
             >
               {uploadOpen ? 'Hide' : 'Show'}
             </button>
           </div>
           {uploadOpen && (
-            <form onSubmit={onUpload} className="space-y-3 px-6 pb-6">
+            <form onSubmit={onUpload} className="px-6 py-5 grid gap-4">
           <p className="text-sm text-gray-500 dark:text-gray-400">Leave fields blank to auto-fill using the resume parser.</p>
-          <input placeholder="Candidate name (optional)" className="w-full rounded border-gray-300 dark:bg-gray-950 dark:border-white/10" value={form.candidate_name} onChange={(e) => setForm({ ...form, candidate_name: e.target.value })} />
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <input placeholder="Email (optional)" type="email" className="w-full rounded border-gray-300 dark:bg-gray-950 dark:border-white/10" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-            <input placeholder="Phone (optional)" className="w-full rounded border-gray-300 dark:bg-gray-950 dark:border-white/10" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Candidate name</label>
+          <input placeholder="e.g., Priya Sharma" className="w-full rounded-md border border-gray-300 dark:border-white/10 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition" value={form.candidate_name} onChange={(e) => setForm({ ...form, candidate_name: e.target.value })} />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
+              <input placeholder="name@company.com" type="email" className="w-full rounded-md border border-gray-300 dark:border-white/10 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Phone</label>
+              <input placeholder="+91 98765 43210" className="w-full rounded-md border border-gray-300 dark:border-white/10 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
           </div>
-          <input placeholder="Skills (comma separated, optional)" className="w-full rounded border-gray-300 dark:bg-gray-950 dark:border-white/10" value={form.skills} onChange={(e) => setForm({ ...form, skills: e.target.value })} />
-          <input placeholder="Education (optional)" className="w-full rounded border-gray-300 dark:bg-gray-950 dark:border-white/10" value={form.education} onChange={(e) => setForm({ ...form, education: e.target.value })} />
+          </div>
+          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Skills</label>
+          <input placeholder="comma separated (auto-filled on preview)" className="w-full rounded-md border border-gray-300 dark:border-white/10 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition" value={form.skills} onChange={(e) => setForm({ ...form, skills: e.target.value })} />
+          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Education</label>
+          <input placeholder="e.g., B.Tech, IIT Bombay (2018)" className="w-full rounded-md border border-gray-300 dark:border-white/10 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition" value={form.education} onChange={(e) => setForm({ ...form, education: e.target.value })} />
+          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Resume file (PDF/DOC/DOCX)</label>
           <input type="file" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={(e) => setForm({ ...form, file: e.target.files?.[0] || null })} />
           <div className="flex items-center gap-3">
             <button type="button" onClick={onPreview} disabled={previewing || !form.file} className="rounded border dark:border-white/10 px-4 py-2">
@@ -295,14 +305,14 @@ export default function AdminResumesPage() {
                 {editId === r.id ? (
                   <div className="space-y-2">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                      <input className="rounded border-gray-300 dark:bg-gray-950 dark:border-white/10" value={editForm.candidate_name} onChange={(e) => setEditForm({ ...editForm, candidate_name: e.target.value })} />
-                      <input className="rounded border-gray-300 dark:bg-gray-950 dark:border-white/10" value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} />
+                      <input className="w-full rounded-md border border-gray-300 dark:border-white/10 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition" value={editForm.candidate_name} onChange={(e) => setEditForm({ ...editForm, candidate_name: e.target.value })} />
+                      <input className="w-full rounded-md border border-gray-300 dark:border-white/10 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition" value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} />
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                      <input className="rounded border-gray-300 dark:bg-gray-950 dark:border-white/10" value={editForm.phone} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} />
-                      <input className="rounded border-gray-300 dark:bg-gray-950 dark:border-white/10" value={editForm.education} onChange={(e) => setEditForm({ ...editForm, education: e.target.value })} />
+                      <input className="w-full rounded-md border border-gray-300 dark:border-white/10 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition" value={editForm.phone} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} />
+                      <input className="w-full rounded-md border border-gray-300 dark:border-white/10 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition" value={editForm.education} onChange={(e) => setEditForm({ ...editForm, education: e.target.value })} />
                     </div>
-                    <input className="rounded border-gray-300 dark:bg-gray-950 dark:border-white/10" placeholder="Skills" value={editForm.skills} onChange={(e) => setEditForm({ ...editForm, skills: e.target.value })} />
+                    <input className="w-full rounded-md border border-gray-300 dark:border-white/10 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition" placeholder="Skills" value={editForm.skills} onChange={(e) => setEditForm({ ...editForm, skills: e.target.value })} />
                     <div className="space-x-2">
                       <button className="px-3 py-1 rounded bg-primary text-white" onClick={() => saveEdit(r.id)}>Save</button>
                       <button className="px-3 py-1 rounded border dark:border-white/10" onClick={() => setEditId(null)}>Cancel</button>
@@ -362,4 +372,9 @@ export default function AdminResumesPage() {
     </div>
   );
 }
+
+
+
+
+
 
