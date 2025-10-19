@@ -42,6 +42,13 @@ export default function AdminResumesPage() {
   });
   const [expSkills, setExpSkills] = useState<Record<number, boolean>>({});
   const [expEdu, setExpEdu] = useState<Record<number, boolean>>({});
+  
+  const clearSearch = async () => {
+    setQ('');
+    setSkillQuery('');
+    setOffset(0);
+    await fetchResumes(true);
+  };
 
   // upload form
   const [form, setForm] = useState({
@@ -288,31 +295,71 @@ export default function AdminResumesPage() {
         </div>
 
         {/* Search */}
-        <form id="search" onSubmit={onSearch} className="mb-6 grid grid-cols-1 md:grid-cols-6 gap-3 bg-white dark:bg-gray-900 border dark:border-white/10 p-4 rounded scroll-mt-24">
-          <input className="md:col-span-3 rounded border-gray-300 dark:bg-gray-950 dark:border-white/10" placeholder="Search text (name, email, education)" value={q} onChange={(e) => setQ(e.target.value)} />
-          <input className="md:col-span-2 rounded border-gray-300 dark:bg-gray-950 dark:border-white/10" placeholder="Skills (comma separated)" value={skillQuery} onChange={(e) => setSkillQuery(e.target.value)} />
-          <button className="md:col-span-1 rounded bg-primary text-white px-4 py-2">Search</button>
+        <form
+          id="search"
+          onSubmit={onSearch}
+          className="mb-6 bg-white dark:bg-gray-900 border dark:border-white/10 p-4 rounded-xl shadow-sm scroll-mt-24"
+        >
+          <div className="flex flex-col gap-3 md:flex-row md:items-center">
+            {/* Text search */}
+            <div className="relative flex-1">
+              <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
+                {/* search icon */}
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-70"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              </span>
+              <input
+                className="w-full rounded-full border border-gray-300 dark:border-white/10 bg-white dark:bg-gray-950 pl-10 pr-4 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition"
+                placeholder="Search name, email, education"
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+              />
+            </div>
+            {/* Skills */}
+            <div className="relative md:w-80">
+              <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
+                {/* tag icon */}
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-70"><path d="M20.59 13.41L11 3.83a2 2 0 00-1.41-.58H4a2 2 0 00-2 2v5.59a2 2 0 00.59 1.41l9.59 9.59a2 2 0 002.83 0l5.59-5.59a2 2 0 000-2.83z"></path><circle cx="7" cy="7" r="1"></circle></svg>
+              </span>
+              <input
+                className="w-full rounded-full border border-gray-300 dark:border-white/10 bg-white dark:bg-gray-950 pl-10 pr-4 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition"
+                placeholder="Skills (comma separated)"
+                value={skillQuery}
+                onChange={(e) => setSkillQuery(e.target.value)}
+              />
+            </div>
+            {/* Actions */}
+            <div className="flex gap-2 md:ml-auto">
+              <button className="rounded-full bg-primary text-white px-5 py-2 text-sm shadow hover:opacity-95">Search</button>
+              <button type="button" onClick={clearSearch} className="rounded-full border border-black/10 dark:border-white/10 px-5 py-2 text-sm hover:bg-black/5 dark:hover:bg-white/10">Clear</button>
+            </div>
+          </div>
+          {(q || skillQuery) && (
+            <div className="mt-3 text-xs text-gray-500 dark:text-gray-400">
+              Active filters: {q && <span className="rounded-full bg-gray-100 dark:bg-gray-800 px-2 py-0.5 border dark:border-white/10 mr-2">text: "{q}"</span>}
+              {skillQuery && <span className="rounded-full bg-gray-100 dark:bg-gray-800 px-2 py-0.5 border dark:border-white/10">skills: "{skillQuery}"</span>}
+            </div>
+          )}
         </form>
 
         {/* List (full width) */}
-        <div id="results" className="bg-white dark:bg-gray-900 border dark:border-white/10 p-6 rounded scroll-mt-24">
-          <div className="flex items-center justify-between mb-4">
+        <div id="results" className="bg-white dark:bg-gray-900 border dark:border-white/10 p-6 rounded-xl shadow-sm scroll-mt-24">
+          <div className="flex items-center justify-between mb-5">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">All Resumes</h2>
-            <div className="text-sm text-gray-500">
+            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
               {typeof total === 'number' && (
-                <span>Showing {resumes.length} of {total}</span>
+                <span className="rounded-full border dark:border-white/10 px-2 py-0.5">{resumes.length} / {total}</span>
               )}
-              {loading && <span className="ml-3">Loading...</span>}
+              {loading && <span className="ml-2">Loading…</span>}
             </div>
           </div>
-          <div className="divide-y dark:divide-white/10">
+          <div className="grid grid-cols-1 gap-4">
             {!loading && resumes.length === 0 && (
-              <p className="text-gray-500">No resumes yet.</p>
+              <p className="text-gray-500">No resumes found.</p>
             )}
             {resumes.map((r) => (
-              <div key={r.id} className="py-4">
+              <div key={r.id} className="rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-950 p-4 shadow-sm hover:shadow transition">
                 {editId === r.id ? (
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                       <input className="w-full rounded-md border border-gray-300 dark:border-white/10 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition" value={editForm.candidate_name} onChange={(e) => setEditForm({ ...editForm, candidate_name: e.target.value })} />
                       <input className="w-full rounded-md border border-gray-300 dark:border-white/10 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition" value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} />
@@ -322,18 +369,32 @@ export default function AdminResumesPage() {
                       <input className="w-full rounded-md border border-gray-300 dark:border-white/10 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition" value={editForm.education} onChange={(e) => setEditForm({ ...editForm, education: e.target.value })} />
                     </div>
                     <input className="w-full rounded-md border border-gray-300 dark:border-white/10 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition" placeholder="Skills" value={editForm.skills} onChange={(e) => setEditForm({ ...editForm, skills: e.target.value })} />
-                    <div className="space-x-2">
-                      <button className="px-3 py-1 rounded bg-primary text-white" onClick={() => saveEdit(r.id)}>Save</button>
-                      <button className="px-3 py-1 rounded border dark:border-white/10" onClick={() => setEditId(null)}>Cancel</button>
+                    <div className="flex gap-2">
+                      <button className="px-3 py-1.5 rounded-md bg-primary text-white text-sm" onClick={() => saveEdit(r.id)}>Save</button>
+                      <button className="px-3 py-1.5 rounded-md border dark:border-white/10 text-sm" onClick={() => setEditId(null)}>Cancel</button>
                     </div>
                   </div>
                 ) : (
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <div className="font-semibold text-gray-900 dark:text-gray-100">{r.candidate_name}</div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">{r.email} - {r.phone}</div>
+                  <div className="flex items-start justify-between gap-6">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <div className="font-semibold text-gray-900 dark:text-gray-100 truncate max-w-[60vw] md:max-w-none">{r.candidate_name}</div>
+                        <a href={`${API_BASE_URL}/uploads/${r.resume_path}`} target="_blank" rel="noreferrer" className="text-xs rounded-full border dark:border-white/10 px-2 py-0.5 text-primary hover:bg-primary/5">Download</a>
+                      </div>
+                      <div className="mt-1 flex flex-wrap gap-2 text-xs text-gray-600 dark:text-gray-400">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 dark:bg-gray-800 px-2 py-0.5 border dark:border-white/10">
+                          {/* mail icon */}
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16v16H4z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                          {r.email}
+                        </span>
+                        <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 dark:bg-gray-800 px-2 py-0.5 border dark:border-white/10">
+                          {/* phone icon */}
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.12.89.33 1.76.61 2.6a2 2 0 0 1-.45 2.11L8 9a16 16 0 0 0 7 7l.57-1.31a2 2 0 0 1 2.11-.45c.84.28 1.71.49 2.6.61A2 2 0 0 1 22 16.92z"></path></svg>
+                          {r.phone}
+                        </span>
+                      </div>
                       {r.education && (
-                        <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                        <div className="text-sm text-gray-600 dark:text-gray-400 mt-2">
                           <span className={expEdu[r.id] ? '' : 'line-clamp-2'}>Education: {r.education}</span>
                           {r.education.length > 160 && (
                             <button className="ml-2 text-primary underline text-xs" onClick={() => setExpEdu((m) => ({ ...m, [r.id]: !m[r.id] }))}>
@@ -349,7 +410,7 @@ export default function AdminResumesPage() {
                         const visible = showAll ? items : items.slice(0, limit);
                         const hiddenCount = Math.max(items.length - visible.length, 0);
                         return (
-                          <div className="mt-2 flex flex-wrap gap-2">
+                          <div className="mt-3 flex flex-wrap gap-2">
                             {visible.map((s) => (
                               <span key={s} className="text-xs rounded-full px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border dark:border-white/10">{s}</span>
                             ))}
@@ -362,13 +423,10 @@ export default function AdminResumesPage() {
                           </div>
                         );
                       })()}
-                      <div className="mt-2">
-                        <a href={`${API_BASE_URL}/uploads/${r.resume_path}`} target="_blank" rel="noreferrer" className="text-sm text-primary underline">Download resume</a>
-                      </div>
                     </div>
-                    <div className="shrink-0 space-x-2">
-                      <button className="px-3 py-1 rounded border dark:border-white/10" onClick={() => startEdit(r)}>Edit</button>
-                      <button className="px-3 py-1 rounded border border-red-300 text-red-600" onClick={() => remove(r.id)}>Delete</button>
+                    <div className="shrink-0 flex items-center gap-2">
+                      <button className="px-3 py-1.5 rounded-md border dark:border-white/10 text-sm" onClick={() => startEdit(r)}>Edit</button>
+                      <button className="px-3 py-1.5 rounded-md border border-red-300 text-red-600 text-sm" onClick={() => remove(r.id)}>Delete</button>
                     </div>
                   </div>
                 )}
