@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -61,12 +61,6 @@ export default function AdminResumesPage() {
   });
   const [uploading, setUploading] = useState(false);
   const [previewing, setPreviewing] = useState(false);
-  // bulk upload progress
-  const [bulkUploading, setBulkUploading] = useState(false);
-  const [bulkProcessed, setBulkProcessed] = useState(0);
-  const [bulkUploaded, setBulkUploaded] = useState(0);
-  const [bulkSkipped, setBulkSkipped] = useState(0);
-  const [bulkFailed, setBulkFailed] = useState(0);
 
   // edit
   const [editId, setEditId] = useState<number | null>(null);
@@ -168,88 +162,6 @@ export default function AdminResumesPage() {
       setError(e.message ?? 'Preview failed');
     } finally {
       setPreviewing(false);
-    }
-  };
-
-  // Sequential multi-upload with per-file confirmation
-  const onBulkFilesSelected = async (files: FileList | null) => {
-    if (!files || files.length === 0) return;
-    setError(null);
-    setMessage(null);
-    setBulkUploading(true);
-    setBulkProcessed(0);
-    setBulkUploaded(0);
-    setBulkSkipped(0);
-    setBulkFailed(0);
-
-    // local counters to avoid async state timing
-    let cProcessed = 0;
-    let cUploaded = 0;
-    let cSkipped = 0;
-    let cFailed = 0;
-
-    try {
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-
-        // Parse preview first
-        let preview: { candidate_name: string; email: string; phone: string; skills: string; education: string } | null = null;
-        try {
-          const fdPrev = new FormData();
-          fdPrev.append('resume', file);
-          preview = await apiPost('/api/resumes/preview', fdPrev);
-        } catch (e) {
-          preview = null;
-        }
-
-        const candidate_name = preview?.candidate_name || '';
-        const email = preview?.email || '';
-        const phone = preview?.phone || '';
-        const skills = preview?.skills || '';
-        const education = preview?.education || '';
-
-        const short = (s: string, n = 140) => (s && s.length > n ? s.slice(0, n) + '…' : s || '');
-        const summary = `File: ${file.name}\n\n` +
-          `Name: ${candidate_name || '(not detected)'}\n` +
-          `Email: ${email || '(not detected)'}\n` +
-          `Phone: ${phone || '(not detected)'}\n` +
-          `Skills: ${short(skills)}\n` +
-          `Education: ${short(education)}\n\n` +
-          `Upload this resume?`;
-
-        const ok = window.confirm(summary);
-        if (!ok) {
-          cSkipped += 1;
-          setBulkSkipped(cSkipped);
-          cProcessed += 1;
-          setBulkProcessed(cProcessed);
-          continue;
-        }
-
-        try {
-          const fd = new FormData();
-          if (candidate_name) fd.append('candidate_name', candidate_name);
-          if (email) fd.append('email', email);
-          if (phone) fd.append('phone', phone);
-          if (skills) fd.append('skills', skills);
-          if (education) fd.append('education', education);
-          fd.append('resume', file);
-          await apiPost('/api/resumes', fd);
-          cUploaded += 1;
-          setBulkUploaded(cUploaded);
-        } catch (e) {
-          cFailed += 1;
-          setBulkFailed(cFailed);
-        } finally {
-          cProcessed += 1;
-          setBulkProcessed(cProcessed);
-        }
-      }
-
-      await fetchResumes(true);
-      setMessage(`Bulk upload finished. Uploaded: ${cUploaded} | Skipped: ${cSkipped} | Failed: ${cFailed}.`);
-    } finally {
-      setBulkUploading(false);
     }
   };
 
@@ -372,34 +284,6 @@ export default function AdminResumesPage() {
           <input placeholder="e.g., B.Tech, IIT Bombay (2018)" className="w-full rounded-md border border-gray-300 dark:border-white/10 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition" value={form.education} onChange={(e) => setForm({ ...form, education: e.target.value })} />
           <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Resume file (PDF/DOC/DOCX)</label>
           <input type="file" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={(e) => setForm({ ...form, file: e.target.files?.[0] || null })} />
-
-          {/* Bulk upload (multiple files) */}
-          <div className="mt-3 grid gap-2">
-            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">Bulk upload (multiple files)</label>
-            <input
-              id="bulkInput"
-              type="file"
-              multiple
-              accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-              onChange={(e) => onBulkFilesSelected(e.target.files)}
-              className="hidden"
-            />
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                disabled={bulkUploading}
-                onClick={() => document.getElementById('bulkInput')?.click()}
-                className="rounded border dark:border-white/10 px-4 py-2 text-sm"
-              >
-                {bulkUploading ? 'Processing…' : 'Select Multiple Resumes'}
-              </button>
-              {bulkUploading && (
-                <span className="text-xs text-gray-600 dark:text-gray-400">
-                  Processed: {bulkProcessed} • Uploaded: {bulkUploaded} • Skipped: {bulkSkipped} • Failed: {bulkFailed}
-                </span>
-              )}
-            </div>
-          </div>
           <div className="flex items-center gap-3">
             <button type="button" onClick={onPreview} disabled={previewing || !form.file} className="rounded border dark:border-white/10 px-4 py-2">
               {previewing ? 'Parsing...' : 'Parse & Preview'}
@@ -465,7 +349,7 @@ export default function AdminResumesPage() {
               {typeof total === 'number' && (
                 <span className="rounded-full border dark:border-white/10 px-2 py-0.5">{resumes.length} / {total}</span>
               )}
-              {loading && <span className="ml-2">Loading…</span>}
+              {loading && <span className="ml-2">Loading�</span>}
             </div>
           </div>
           <div className="grid grid-cols-1 gap-4">
@@ -555,6 +439,7 @@ export default function AdminResumesPage() {
     </div>
   );
 }
+
 
 
 
