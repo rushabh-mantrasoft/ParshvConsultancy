@@ -35,9 +35,9 @@ export default function JobList() {
   }, []);
 
   return (
-    <section className="py-16 bg-gray-100">
+    <section className="py-16 bg-gray-100 dark:bg-gray-900">
       <div className="container mx-auto px-4">
-        <h2 className="text-3xl md:text-4xl font-bold mb-8 text-center">Latest Jobs</h2>
+        <h2 className="text-3xl md:text-4xl font-bold mb-8 text-center text-gray-900 dark:text-gray-100">Latest Jobs</h2>
         {loading && <p className="text-center text-gray-500">Loading jobs...</p>}
         {error && <p className="text-center text-red-500">{error}</p>}
         {!loading && !error && (
@@ -48,12 +48,12 @@ export default function JobList() {
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                className="bg-white p-6 rounded-lg shadow hover:shadow-lg transition"
+                className="bg-white dark:bg-gray-950 p-6 rounded-lg shadow hover:shadow-lg transition border dark:border-white/10"
               >
-                <h3 className="text-xl font-semibold mb-2">{job.title}</h3>
-                <p className="text-gray-600 mb-2 line-clamp-3">{job.description}</p>
-                <p className="text-gray-500">{job.location}</p>
-                {job.salary && <p className="text-gray-500">{job.salary}</p>}
+                <h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-gray-100">{job.title}</h3>
+                <p className="text-gray-600 dark:text-gray-400 mb-2 line-clamp-3">{job.description}</p>
+                <p className="text-gray-500 dark:text-gray-400">{job.location}</p>
+                {job.salary && <p className="text-gray-500 dark:text-gray-400">{job.salary}</p>}
               </motion.div>
             ))}
             {jobs.length === 0 && (
