@@ -20,7 +20,7 @@ export default function AboutSection() {
           viewport={{ once: true }}
           className="text-center text-gray-600 max-w-2xl mx-auto"
         >
-          Parshv Consultancy is dedicated to bridging the gap between employers and job seekers. With a focus on integrity and efficiency, we deliver recruitment solutions that meet the unique needs of each client. Our team combines industry expertise with a people‑first approach to ensure success for both companies and candidates.
+          Parshv Consultancy is dedicated to bridging the gap between employers and job seekers mainly in Computer and Finance field. With a focus on integrity and efficiency, we deliver recruitment solutions that meet the unique needs of each client. Our team combines industry expertise with a people‑first approach to ensure success for both companies and candidates.
         </motion.p>
       </div>
     </section>
